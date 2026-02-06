@@ -11,7 +11,8 @@ import {
   ChevronDown
 } from 'lucide-react';
 import { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface SidebarProps {
   onLogout: () => void;
@@ -26,7 +27,12 @@ const navItems = [
 
 export function Sidebar({ onLogout }: SidebarProps) {
   const location = useLocation();
+  const navigate = useNavigate();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const { profile, user } = useAuth();
+
+  const displayName = profile?.full_name || user?.email?.split('@')[0] || 'User';
+  const initials = displayName.slice(0, 2).toUpperCase();
 
   return (
     <motion.aside
@@ -77,6 +83,7 @@ export function Sidebar({ onLogout }: SidebarProps) {
         <motion.button
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
+          onClick={() => navigate('/groups')}
           className={`btn-primary w-full flex items-center justify-center gap-2 ${isCollapsed ? 'px-3' : ''}`}
         >
           <Plus className="w-5 h-5" />
@@ -120,12 +127,12 @@ export function Sidebar({ onLogout }: SidebarProps) {
       <div className="p-4 border-t border-border/50">
         <div className={`flex items-center gap-3 ${isCollapsed ? 'justify-center' : ''}`}>
           <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/50 to-accent/50 flex items-center justify-center shrink-0">
-            <span className="text-sm font-semibold">JD</span>
+            <span className="text-sm font-semibold">{initials}</span>
           </div>
           {!isCollapsed && (
             <div className="flex-1 min-w-0">
-              <p className="font-medium truncate">John Doe</p>
-              <p className="text-xs text-muted-foreground truncate">john@example.com</p>
+              <p className="font-medium truncate">{displayName}</p>
+              <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
             </div>
           )}
           {!isCollapsed && (

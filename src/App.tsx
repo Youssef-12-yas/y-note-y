@@ -13,31 +13,60 @@ import { GroupDetail } from './components/Groups/GroupDetail';
 import { NoteEditor } from './components/Notes/NoteEditor';
 import { AIReviewPage } from './components/AIReview/AIReviewPage';
 import { SettingsPage } from './components/Settings/SettingsPage';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-const App = () => {
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { user, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="w-10 h-10 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/auth" replace />;
+  }
+
+  return <>{children}</>;
+}
+
+function AuthRoute({ children }: { children: React.ReactNode }) {
+  const { user, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="w-10 h-10 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (user) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return <>{children}</>;
+}
+
+function AppRoutes() {
   const [hasSeenOnboarding, setHasSeenOnboarding] = useState(() => {
     return localStorage.getItem('ynote-onboarding') === 'complete';
   });
-  const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    return localStorage.getItem('ynote-auth') === 'true';
-  });
+  const { signOut } = useAuth();
 
   const handleOnboardingComplete = () => {
     localStorage.setItem('ynote-onboarding', 'complete');
     setHasSeenOnboarding(true);
   };
 
-  const handleAuthSuccess = () => {
-    localStorage.setItem('ynote-auth', 'true');
-    setIsAuthenticated(true);
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem('ynote-auth');
-    setIsAuthenticated(false);
+  const handleLogout = async () => {
+    await signOut();
   };
 
   // Show onboarding first
@@ -46,87 +75,88 @@ const App = () => {
   }
 
   return (
+    <Routes>
+      {/* Auth routes */}
+      <Route 
+        path="/auth" 
+        element={
+          <AuthRoute>
+            <AuthPage />
+          </AuthRoute>
+        } 
+      />
+      
+      {/* Protected routes */}
+      <Route 
+        path="/dashboard" 
+        element={
+          <ProtectedRoute>
+            <MainLayout onLogout={handleLogout}><Dashboard /></MainLayout>
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/groups" 
+        element={
+          <ProtectedRoute>
+            <MainLayout onLogout={handleLogout}><GroupsPage /></MainLayout>
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/groups/:groupId" 
+        element={
+          <ProtectedRoute>
+            <MainLayout onLogout={handleLogout}><GroupDetail /></MainLayout>
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/notes/:noteId" 
+        element={
+          <ProtectedRoute>
+            <MainLayout onLogout={handleLogout}><NoteEditor /></MainLayout>
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/ai-review" 
+        element={
+          <ProtectedRoute>
+            <MainLayout onLogout={handleLogout}><AIReviewPage /></MainLayout>
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/settings" 
+        element={
+          <ProtectedRoute>
+            <MainLayout onLogout={handleLogout}><SettingsPage /></MainLayout>
+          </ProtectedRoute>
+        } 
+      />
+      
+      {/* Index redirects */}
+      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      
+      {/* 404 */}
+      <Route path="*" element={<NotFound />} />
+    </Routes>
+  );
+}
+
+const App = () => {
+  return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            {/* Auth routes */}
-            <Route 
-              path="/auth" 
-              element={
-                isAuthenticated 
-                  ? <Navigate to="/dashboard" replace /> 
-                  : <AuthPage onSuccess={handleAuthSuccess} />
-              } 
-            />
-            
-            {/* Protected routes */}
-            <Route 
-              path="/dashboard" 
-              element={
-                isAuthenticated 
-                  ? <MainLayout onLogout={handleLogout}><Dashboard /></MainLayout>
-                  : <Navigate to="/auth" replace />
-              } 
-            />
-            <Route 
-              path="/groups" 
-              element={
-                isAuthenticated 
-                  ? <MainLayout onLogout={handleLogout}><GroupsPage /></MainLayout>
-                  : <Navigate to="/auth" replace />
-              } 
-            />
-            <Route 
-              path="/groups/:groupId" 
-              element={
-                isAuthenticated 
-                  ? <MainLayout onLogout={handleLogout}><GroupDetail /></MainLayout>
-                  : <Navigate to="/auth" replace />
-              } 
-            />
-            <Route 
-              path="/notes/:noteId" 
-              element={
-                isAuthenticated 
-                  ? <MainLayout onLogout={handleLogout}><NoteEditor /></MainLayout>
-                  : <Navigate to="/auth" replace />
-              } 
-            />
-            <Route 
-              path="/ai-review" 
-              element={
-                isAuthenticated 
-                  ? <MainLayout onLogout={handleLogout}><AIReviewPage /></MainLayout>
-                  : <Navigate to="/auth" replace />
-              } 
-            />
-            <Route 
-              path="/settings" 
-              element={
-                isAuthenticated 
-                  ? <MainLayout onLogout={handleLogout}><SettingsPage /></MainLayout>
-                  : <Navigate to="/auth" replace />
-              } 
-            />
-            
-            {/* Index redirects */}
-            <Route 
-              path="/" 
-              element={
-                isAuthenticated 
-                  ? <Navigate to="/dashboard" replace />
-                  : <Navigate to="/auth" replace />
-              } 
-            />
-            
-            {/* 404 */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
+      <AuthProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <AppRoutes />
+          </BrowserRouter>
+        </TooltipProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 };

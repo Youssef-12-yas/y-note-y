@@ -5,65 +5,22 @@ import {
   Palette, 
   Shield, 
   Database, 
-  Download,
   ChevronRight,
-  Moon,
-  Sun,
-  Globe,
-  Trash2
+  Trash2,
+  LogOut,
+  Mail,
+  Save,
+  Loader2
 } from 'lucide-react';
 import { useState } from 'react';
-
-const settingsSections = [
-  {
-    title: 'Account',
-    icon: User,
-    items: [
-      { label: 'Profile', description: 'Update your personal information' },
-      { label: 'Email', description: 'Manage email preferences' },
-      { label: 'Password', description: 'Change your password' },
-    ]
-  },
-  {
-    title: 'Preferences',
-    icon: Palette,
-    items: [
-      { label: 'Theme', description: 'Choose light or dark mode', toggle: true },
-      { label: 'Language', description: 'Select your preferred language' },
-      { label: 'Editor', description: 'Customize editor settings' },
-    ]
-  },
-  {
-    title: 'Notifications',
-    icon: Bell,
-    items: [
-      { label: 'Push Notifications', description: 'Enable desktop notifications', toggle: true },
-      { label: 'Email Digest', description: 'Weekly summary emails', toggle: true },
-      { label: 'AI Updates', description: 'Notify when AI review completes', toggle: true },
-    ]
-  },
-  {
-    title: 'Privacy & Security',
-    icon: Shield,
-    items: [
-      { label: 'Two-Factor Auth', description: 'Add extra security to your account' },
-      { label: 'Sessions', description: 'Manage active sessions' },
-      { label: 'Data Privacy', description: 'Control your data usage' },
-    ]
-  },
-  {
-    title: 'Data',
-    icon: Database,
-    items: [
-      { label: 'Export Data', description: 'Download all your notes and groups' },
-      { label: 'Import', description: 'Import from other apps' },
-      { label: 'Delete Account', description: 'Permanently delete your account', danger: true },
-    ]
-  },
-];
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
 
 export function SettingsPage() {
-  const [isDark, setIsDark] = useState(true);
+  const { user, profile, updateProfile, signOut } = useAuth();
+  const [fullName, setFullName] = useState(profile?.full_name || '');
+  const [isSaving, setIsSaving] = useState(false);
+  
   const [toggleStates, setToggleStates] = useState<Record<string, boolean>>({
     'Push Notifications': true,
     'Email Digest': false,
@@ -72,6 +29,31 @@ export function SettingsPage() {
 
   const handleToggle = (label: string) => {
     setToggleStates(prev => ({ ...prev, [label]: !prev[label] }));
+    toast.success(`${label} ${!toggleStates[label] ? 'enabled' : 'disabled'}`);
+  };
+
+  const handleSaveProfile = async () => {
+    setIsSaving(true);
+    try {
+      const { error } = await updateProfile({ full_name: fullName });
+      if (error) {
+        toast.error('Failed to update profile');
+      } else {
+        toast.success('Profile updated successfully!');
+      }
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    if (confirm('Are you sure you want to sign out?')) {
+      await signOut();
+    }
+  };
+
+  const handleDeleteAccount = () => {
+    toast.error('Account deletion is not available yet. Please contact support.');
   };
 
   return (
@@ -88,60 +70,187 @@ export function SettingsPage() {
 
       {/* Settings sections */}
       <div className="space-y-6">
-        {settingsSections.map((section, sectionIndex) => (
-          <motion.div
-            key={section.title}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: sectionIndex * 0.1 }}
-            className="glass rounded-2xl overflow-hidden"
-          >
-            {/* Section header */}
-            <div className="px-6 py-4 border-b border-border/50 flex items-center gap-3">
-              <section.icon className="w-5 h-5 text-primary" />
-              <h2 className="font-semibold">{section.title}</h2>
+        {/* Profile Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="glass rounded-2xl overflow-hidden"
+        >
+          <div className="px-6 py-4 border-b border-border/50 flex items-center gap-3">
+            <User className="w-5 h-5 text-primary" />
+            <h2 className="font-semibold">Profile</h2>
+          </div>
+
+          <div className="p-6 space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">Full Name</label>
+              <input
+                type="text"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                placeholder="Your name"
+                className="input-glass w-full max-w-md"
+              />
             </div>
 
-            {/* Section items */}
-            <div className="divide-y divide-border/50">
-              {section.items.map((item) => (
-                <motion.div
-                  key={item.label}
-                  whileHover={{ x: 4 }}
-                  className={`px-6 py-4 flex items-center justify-between cursor-pointer transition-colors ${
-                    item.danger ? 'hover:bg-destructive/10' : 'hover:bg-secondary/30'
+            <div>
+              <label className="block text-sm font-medium mb-2">Email</label>
+              <div className="flex items-center gap-2">
+                <Mail className="w-4 h-4 text-muted-foreground" />
+                <span className="text-muted-foreground">{user?.email}</span>
+              </div>
+            </div>
+
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={handleSaveProfile}
+              disabled={isSaving}
+              className="btn-primary flex items-center gap-2"
+            >
+              {isSaving ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Save className="w-4 h-4" />
+              )}
+              Save Changes
+            </motion.button>
+          </div>
+        </motion.div>
+
+        {/* Preferences Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="glass rounded-2xl overflow-hidden"
+        >
+          <div className="px-6 py-4 border-b border-border/50 flex items-center gap-3">
+            <Palette className="w-5 h-5 text-primary" />
+            <h2 className="font-semibold">Preferences</h2>
+          </div>
+
+          <div className="divide-y divide-border/50">
+            <div className="px-6 py-4 flex items-center justify-between">
+              <div>
+                <p className="font-medium">Theme</p>
+                <p className="text-sm text-muted-foreground">Dark mode is enabled by default</p>
+              </div>
+              <span className="text-sm text-muted-foreground">Dark</span>
+            </div>
+            <div className="px-6 py-4 flex items-center justify-between">
+              <div>
+                <p className="font-medium">Language</p>
+                <p className="text-sm text-muted-foreground">Select your preferred language</p>
+              </div>
+              <span className="text-sm text-muted-foreground">English</span>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Notifications Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="glass rounded-2xl overflow-hidden"
+        >
+          <div className="px-6 py-4 border-b border-border/50 flex items-center gap-3">
+            <Bell className="w-5 h-5 text-primary" />
+            <h2 className="font-semibold">Notifications</h2>
+          </div>
+
+          <div className="divide-y divide-border/50">
+            {[
+              { label: 'Push Notifications', description: 'Enable desktop notifications' },
+              { label: 'Email Digest', description: 'Weekly summary emails' },
+              { label: 'AI Updates', description: 'Notify when AI review completes' },
+            ].map((item) => (
+              <div key={item.label} className="px-6 py-4 flex items-center justify-between">
+                <div>
+                  <p className="font-medium">{item.label}</p>
+                  <p className="text-sm text-muted-foreground">{item.description}</p>
+                </div>
+                <button
+                  onClick={() => handleToggle(item.label)}
+                  className={`w-12 h-6 rounded-full transition-colors relative ${
+                    toggleStates[item.label] ? 'bg-primary' : 'bg-secondary'
                   }`}
                 >
-                  <div>
-                    <p className={`font-medium ${item.danger ? 'text-destructive' : ''}`}>
-                      {item.label}
-                    </p>
-                    <p className="text-sm text-muted-foreground">{item.description}</p>
-                  </div>
+                  <div
+                    className={`w-5 h-5 rounded-full bg-white absolute top-0.5 transition-all ${
+                      toggleStates[item.label] ? 'left-6' : 'left-0.5'
+                    }`}
+                  />
+                </button>
+              </div>
+            ))}
+          </div>
+        </motion.div>
 
-                  {item.toggle ? (
-                    <button
-                      onClick={() => handleToggle(item.label)}
-                      className={`w-12 h-6 rounded-full transition-colors relative ${
-                        toggleStates[item.label] ? 'bg-primary' : 'bg-secondary'
-                      }`}
-                    >
-                      <div
-                        className={`w-5 h-5 rounded-full bg-white absolute top-0.5 transition-all ${
-                          toggleStates[item.label] ? 'left-6' : 'left-0.5'
-                        }`}
-                      />
-                    </button>
-                  ) : item.danger ? (
-                    <Trash2 className="w-5 h-5 text-destructive" />
-                  ) : (
-                    <ChevronRight className="w-5 h-5 text-muted-foreground" />
-                  )}
-                </motion.div>
-              ))}
-            </div>
-          </motion.div>
-        ))}
+        {/* Privacy Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="glass rounded-2xl overflow-hidden"
+        >
+          <div className="px-6 py-4 border-b border-border/50 flex items-center gap-3">
+            <Shield className="w-5 h-5 text-primary" />
+            <h2 className="font-semibold">Privacy & Security</h2>
+          </div>
+
+          <div className="divide-y divide-border/50">
+            <motion.div
+              whileHover={{ x: 4 }}
+              className="px-6 py-4 flex items-center justify-between cursor-pointer hover:bg-secondary/30"
+            >
+              <div>
+                <p className="font-medium">Change Password</p>
+                <p className="text-sm text-muted-foreground">Update your password</p>
+              </div>
+              <ChevronRight className="w-5 h-5 text-muted-foreground" />
+            </motion.div>
+            <motion.div
+              whileHover={{ x: 4 }}
+              onClick={handleLogout}
+              className="px-6 py-4 flex items-center justify-between cursor-pointer hover:bg-secondary/30"
+            >
+              <div>
+                <p className="font-medium">Sign Out</p>
+                <p className="text-sm text-muted-foreground">Sign out of your account</p>
+              </div>
+              <LogOut className="w-5 h-5 text-muted-foreground" />
+            </motion.div>
+          </div>
+        </motion.div>
+
+        {/* Data Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="glass rounded-2xl overflow-hidden"
+        >
+          <div className="px-6 py-4 border-b border-border/50 flex items-center gap-3">
+            <Database className="w-5 h-5 text-primary" />
+            <h2 className="font-semibold">Data</h2>
+          </div>
+
+          <div className="divide-y divide-border/50">
+            <motion.div
+              whileHover={{ x: 4 }}
+              onClick={handleDeleteAccount}
+              className="px-6 py-4 flex items-center justify-between cursor-pointer hover:bg-destructive/10"
+            >
+              <div>
+                <p className="font-medium text-destructive">Delete Account</p>
+                <p className="text-sm text-muted-foreground">Permanently delete your account</p>
+              </div>
+              <Trash2 className="w-5 h-5 text-destructive" />
+            </motion.div>
+          </div>
+        </motion.div>
       </div>
 
       {/* App info */}
