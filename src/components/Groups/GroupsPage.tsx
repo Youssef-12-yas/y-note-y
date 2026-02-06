@@ -12,32 +12,53 @@ import {
   X
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useGroups, useCreateGroup, useDeleteGroup } from '@/hooks/useGroups';
 
-const mockGroups = [
-  { id: '1', name: 'C++ Programming', description: 'Advanced C++ concepts and practices', lessonsCount: 12, notesCount: 34, color: 'from-blue-500 to-cyan-500', icon: '💻' },
-  { id: '2', name: 'Data Structures', description: 'Trees, graphs, and algorithms', lessonsCount: 8, notesCount: 21, color: 'from-purple-500 to-pink-500', icon: '🌳' },
-  { id: '3', name: 'Machine Learning', description: 'Neural networks and deep learning', lessonsCount: 15, notesCount: 45, color: 'from-orange-500 to-red-500', icon: '🤖' },
-  { id: '4', name: 'Web Development', description: 'React, Node.js, and modern web', lessonsCount: 10, notesCount: 28, color: 'from-green-500 to-teal-500', icon: '🌐' },
-  { id: '5', name: 'Physics', description: 'Quantum mechanics and thermodynamics', lessonsCount: 6, notesCount: 18, color: 'from-indigo-500 to-purple-500', icon: '⚛️' },
-  { id: '6', name: 'English', description: 'Grammar and vocabulary building', lessonsCount: 9, notesCount: 31, color: 'from-pink-500 to-rose-500', icon: '📚' },
+const gradientColors = [
+  'from-blue-500 to-cyan-500',
+  'from-purple-500 to-pink-500',
+  'from-orange-500 to-red-500',
+  'from-green-500 to-teal-500',
+  'from-indigo-500 to-purple-500',
+  'from-pink-500 to-rose-500',
 ];
+
+const defaultIcons = ['📚', '💻', '🧠', '🌳', '🤖', '🌐', '⚛️', '🎨', '📊', '🔬'];
 
 export function GroupsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showNewGroup, setShowNewGroup] = useState(false);
   const [newGroupName, setNewGroupName] = useState('');
   const [newGroupDescription, setNewGroupDescription] = useState('');
+  const [selectedIcon, setSelectedIcon] = useState('📚');
+  const [menuOpen, setMenuOpen] = useState<string | null>(null);
 
-  const filteredGroups = mockGroups.filter(group => 
+  const { data: groups = [], isLoading } = useGroups();
+  const createGroup = useCreateGroup();
+  const deleteGroup = useDeleteGroup();
+
+  const filteredGroups = groups.filter(group => 
     group.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleCreateGroup = (e: React.FormEvent) => {
+  const handleCreateGroup = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Will implement with backend
+    await createGroup.mutateAsync({
+      name: newGroupName,
+      description: newGroupDescription,
+      icon: selectedIcon,
+    });
     setShowNewGroup(false);
     setNewGroupName('');
     setNewGroupDescription('');
+    setSelectedIcon('📚');
+  };
+
+  const handleDeleteGroup = async (groupId: string) => {
+    if (confirm('Are you sure you want to delete this group? All lessons and notes will be deleted.')) {
+      await deleteGroup.mutateAsync(groupId);
+    }
+    setMenuOpen(null);
   };
 
   return (
@@ -84,61 +105,98 @@ export function GroupsPage() {
       </div>
 
       {/* Groups Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <AnimatePresence>
-          {filteredGroups.map((group, index) => (
-            <motion.div
-              key={group.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ delay: index * 0.05 }}
-            >
-              <Link to={`/groups/${group.id}`}>
-                <motion.div
-                  whileHover={{ scale: 1.02, y: -4 }}
-                  className="glass-hover rounded-2xl p-6 h-full cursor-pointer group"
-                >
-                  {/* Icon & Menu */}
-                  <div className="flex items-start justify-between mb-4">
-                    <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${group.color} flex items-center justify-center text-2xl`}>
-                      {group.icon}
-                    </div>
-                    <button 
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                      }}
-                      className="p-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-secondary"
-                    >
-                      <MoreVertical className="w-4 h-4 text-muted-foreground" />
-                    </button>
-                  </div>
-
-                  {/* Content */}
-                  <h3 className="text-xl font-semibold mb-2">{group.name}</h3>
-                  <p className="text-muted-foreground text-sm mb-4 line-clamp-2">{group.description}</p>
-
-                  {/* Stats */}
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-1.5">
-                      <BookOpen className="w-4 h-4" />
-                      <span>{group.lessonsCount} lessons</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <FileText className="w-4 h-4" />
-                      <span>{group.notesCount} notes</span>
-                    </div>
-                  </div>
-                </motion.div>
-              </Link>
-            </motion.div>
+      {isLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div key={i} className="glass rounded-2xl p-6 animate-pulse">
+              <div className="w-14 h-14 rounded-xl bg-secondary mb-4" />
+              <div className="h-6 bg-secondary rounded w-3/4 mb-2" />
+              <div className="h-4 bg-secondary rounded w-full mb-4" />
+              <div className="flex gap-4">
+                <div className="h-4 bg-secondary rounded w-20" />
+                <div className="h-4 bg-secondary rounded w-20" />
+              </div>
+            </div>
           ))}
-        </AnimatePresence>
-      </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <AnimatePresence>
+            {filteredGroups.map((group, index) => (
+              <motion.div
+                key={group.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ delay: index * 0.05 }}
+              >
+                <Link to={`/groups/${group.id}`}>
+                  <motion.div
+                    whileHover={{ scale: 1.02, y: -4 }}
+                    className="glass-hover rounded-2xl p-6 h-full cursor-pointer group relative"
+                  >
+                    {/* Icon & Menu */}
+                    <div className="flex items-start justify-between mb-4">
+                      <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${gradientColors[index % gradientColors.length]} flex items-center justify-center text-2xl`}>
+                        {group.icon || '📚'}
+                      </div>
+                      <div className="relative">
+                        <button 
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setMenuOpen(menuOpen === group.id ? null : group.id);
+                          }}
+                          className="p-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-secondary"
+                        >
+                          <MoreVertical className="w-4 h-4 text-muted-foreground" />
+                        </button>
+                        
+                        {menuOpen === group.id && (
+                          <div className="absolute right-0 top-full mt-1 w-32 glass rounded-lg py-1 z-10">
+                            <button
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleDeleteGroup(group.id);
+                              }}
+                              className="w-full px-3 py-2 text-left text-sm text-destructive hover:bg-destructive/10 flex items-center gap-2"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                              Delete
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Content */}
+                    <h3 className="text-xl font-semibold mb-2">{group.name}</h3>
+                    <p className="text-muted-foreground text-sm mb-4 line-clamp-2">
+                      {group.description || 'No description'}
+                    </p>
+
+                    {/* Stats */}
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-1.5">
+                        <BookOpen className="w-4 h-4" />
+                        <span>{group.lessonsCount || 0} lessons</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <FileText className="w-4 h-4" />
+                        <span>{group.notesCount || 0} notes</span>
+                      </div>
+                    </div>
+                  </motion.div>
+                </Link>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </div>
+      )}
 
       {/* Empty State */}
-      {filteredGroups.length === 0 && (
+      {!isLoading && filteredGroups.length === 0 && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -191,6 +249,27 @@ export function GroupsPage() {
               </div>
 
               <form onSubmit={handleCreateGroup} className="space-y-4">
+                {/* Icon selector */}
+                <div>
+                  <label className="block text-sm font-medium mb-2">Icon</label>
+                  <div className="flex flex-wrap gap-2">
+                    {defaultIcons.map((icon) => (
+                      <button
+                        key={icon}
+                        type="button"
+                        onClick={() => setSelectedIcon(icon)}
+                        className={`w-10 h-10 rounded-lg text-xl flex items-center justify-center transition-all ${
+                          selectedIcon === icon
+                            ? 'bg-primary text-primary-foreground'
+                            : 'bg-secondary hover:bg-secondary/80'
+                        }`}
+                      >
+                        {icon}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 <div>
                   <label className="block text-sm font-medium mb-2">Group Name</label>
                   <input
@@ -222,8 +301,12 @@ export function GroupsPage() {
                   >
                     Cancel
                   </button>
-                  <button type="submit" className="btn-primary flex-1">
-                    Create Group
+                  <button 
+                    type="submit" 
+                    className="btn-primary flex-1"
+                    disabled={createGroup.isPending}
+                  >
+                    {createGroup.isPending ? 'Creating...' : 'Create Group'}
                   </button>
                 </div>
               </form>

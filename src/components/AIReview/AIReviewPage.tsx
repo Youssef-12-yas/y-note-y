@@ -1,73 +1,63 @@
 import { useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Sparkles, 
-  FolderOpen, 
   BookOpen, 
-  FileText,
+  FileText, 
   ChevronRight,
-  Brain,
-  Zap,
+  Loader2,
   CheckCircle,
-  Clock
+  Brain
 } from 'lucide-react';
-
-const mockGroups = [
-  { 
-    id: '1', 
-    name: 'C++ Programming', 
-    icon: '💻',
-    lessonsCount: 12,
-    reviewedCount: 8,
-    color: 'from-blue-500 to-cyan-500'
-  },
-  { 
-    id: '2', 
-    name: 'Data Structures', 
-    icon: '🌳',
-    lessonsCount: 8,
-    reviewedCount: 3,
-    color: 'from-purple-500 to-pink-500'
-  },
-  { 
-    id: '3', 
-    name: 'Machine Learning', 
-    icon: '🤖',
-    lessonsCount: 15,
-    reviewedCount: 15,
-    color: 'from-orange-500 to-red-500'
-  },
-];
-
-const recentReviews = [
-  {
-    id: '1',
-    noteTitle: 'Smart Pointers Overview',
-    groupName: 'C++ Programming',
-    reviewedAt: '2 hours ago',
-    score: 92,
-    issuesFound: 1,
-  },
-  {
-    id: '2',
-    noteTitle: 'Binary Search Trees',
-    groupName: 'Data Structures',
-    reviewedAt: '1 day ago',
-    score: 85,
-    issuesFound: 3,
-  },
-  {
-    id: '3',
-    noteTitle: 'Neural Networks Basics',
-    groupName: 'Machine Learning',
-    reviewedAt: '2 days ago',
-    score: 98,
-    issuesFound: 0,
-  },
-];
+import { Link } from 'react-router-dom';
+import { useGroups } from '@/hooks/useGroups';
+import { useLessons } from '@/hooks/useLessons';
+import { useGenerateAINote } from '@/hooks/useNotes';
 
 export function AIReviewPage() {
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
+  const [selectedLesson, setSelectedLesson] = useState<string | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generatedNote, setGeneratedNote] = useState<any>(null);
+
+  const { data: groups = [], isLoading: groupsLoading } = useGroups();
+  const { data: lessons = [], isLoading: lessonsLoading } = useLessons(selectedGroup || undefined);
+  const generateAINote = useGenerateAINote();
+
+  const handleGenerate = async () => {
+    if (!selectedLesson) return;
+
+    const lesson = lessons.find(l => l.id === selectedLesson);
+    if (!lesson || !lesson.notes || lesson.notes.length === 0) {
+      alert('Please add some notes to this lesson first.');
+      return;
+    }
+
+    const userNotes = lesson.notes
+      .filter(n => !n.is_ai_generated)
+      .map(n => ({ title: n.title, content: n.content || '' }));
+
+    if (userNotes.length === 0) {
+      alert('Please add some user notes (not AI-generated) to this lesson first.');
+      return;
+    }
+
+    setIsGenerating(true);
+    setGeneratedNote(null);
+
+    try {
+      const result = await generateAINote.mutateAsync({
+        lessonId: selectedLesson,
+        userNotes,
+      });
+      setGeneratedNote(result.note);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const selectedLessonData = lessons.find(l => l.id === selectedLesson);
+  const userNotesCount = selectedLessonData?.notes?.filter(n => !n.is_ai_generated).length || 0;
 
   return (
     <div>
@@ -77,163 +67,23 @@ export function AIReviewPage() {
         animate={{ opacity: 1, y: 0 }}
         className="mb-8"
       >
-        <h1 className="text-3xl font-bold mb-2">AI Review</h1>
-        <p className="text-muted-foreground">Let AI analyze and improve your knowledge</p>
+        <div className="flex items-center gap-3 mb-2">
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center">
+            <Sparkles className="w-6 h-6 text-primary-foreground" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold">AI Review</h1>
+            <p className="text-muted-foreground">Generate AI-powered summaries of your notes</p>
+          </div>
+        </div>
       </motion.div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        {[
-          { label: 'Total Reviews', value: '47', icon: Sparkles, color: 'text-primary' },
-          { label: 'Notes Improved', value: '38', icon: Zap, color: 'text-warning' },
-          { label: 'Issues Fixed', value: '126', icon: CheckCircle, color: 'text-success' },
-          { label: 'Avg. Score', value: '91%', icon: Brain, color: 'text-accent' },
-        ].map((stat, index) => (
-          <motion.div
-            key={stat.label}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.1 }}
-            className="glass rounded-xl p-4"
-          >
-            <div className="flex items-center gap-3">
-              <div className={`w-10 h-10 rounded-lg bg-secondary flex items-center justify-center ${stat.color}`}>
-                <stat.icon className="w-5 h-5" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{stat.value}</p>
-                <p className="text-xs text-muted-foreground">{stat.label}</p>
-              </div>
-            </div>
-          </motion.div>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Quick Review */}
-        <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.3 }}
-        >
-          <h2 className="text-lg font-semibold mb-4">Quick Review</h2>
-          <div className="space-y-3">
-            {mockGroups.map((group, index) => (
-              <motion.div
-                key={group.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4 + index * 0.1 }}
-                whileHover={{ scale: 1.01 }}
-                onClick={() => setSelectedGroup(group.id)}
-                className={`glass-hover rounded-xl p-4 cursor-pointer transition-all ${
-                  selectedGroup === group.id ? 'border-primary/50' : ''
-                }`}
-              >
-                <div className="flex items-center gap-4">
-                  <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${group.color} flex items-center justify-center text-xl`}>
-                    {group.icon}
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-medium">{group.name}</h3>
-                    <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                      <span>{group.lessonsCount} lessons</span>
-                      <span>•</span>
-                      <span className="text-success">{group.reviewedCount} reviewed</span>
-                    </div>
-                  </div>
-                  
-                  {/* Progress */}
-                  <div className="text-right">
-                    <p className="text-sm font-medium">
-                      {Math.round((group.reviewedCount / group.lessonsCount) * 100)}%
-                    </p>
-                    <div className="w-24 h-2 rounded-full bg-secondary mt-1">
-                      <div 
-                        className="h-full rounded-full bg-gradient-to-r from-primary to-accent"
-                        style={{ width: `${(group.reviewedCount / group.lessonsCount) * 100}%` }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-
-          {/* Review All Button */}
-          <motion.button
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.7 }}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            className="btn-primary w-full mt-4 flex items-center justify-center gap-2"
-          >
-            <Sparkles className="w-5 h-5" />
-            Review All Unreviewed Notes
-          </motion.button>
-        </motion.div>
-
-        {/* Recent Reviews */}
-        <motion.div
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.3 }}
-        >
-          <h2 className="text-lg font-semibold mb-4">Recent Reviews</h2>
-          <div className="space-y-3">
-            {recentReviews.map((review, index) => (
-              <motion.div
-                key={review.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4 + index * 0.1 }}
-                whileHover={{ x: 4 }}
-                className="glass-hover rounded-xl p-4 cursor-pointer"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center">
-                    <FileText className="w-5 h-5 text-muted-foreground" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-medium truncate">{review.noteTitle}</h3>
-                    <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                      <span>{review.groupName}</span>
-                      <span>•</span>
-                      <span className="flex items-center gap-1">
-                        <Clock className="w-3 h-3" />
-                        {review.reviewedAt}
-                      </span>
-                    </div>
-                  </div>
-                  
-                  {/* Score */}
-                  <div className="text-right">
-                    <div className={`text-lg font-bold ${
-                      review.score >= 90 ? 'text-success' : 
-                      review.score >= 70 ? 'text-warning' : 'text-destructive'
-                    }`}>
-                      {review.score}%
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      {review.issuesFound === 0 ? 'Perfect!' : `${review.issuesFound} issues`}
-                    </p>
-                  </div>
-                  
-                  <ChevronRight className="w-5 h-5 text-muted-foreground" />
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </motion.div>
-      </div>
 
       {/* AI Agents Info */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.8 }}
-        className="mt-8 gradient-border p-6 rounded-2xl"
+        transition={{ delay: 0.1 }}
+        className="mb-8 gradient-border p-6 rounded-2xl"
       >
         <h3 className="font-semibold mb-4 flex items-center gap-2">
           <Brain className="w-5 h-5 text-primary" />
@@ -254,6 +104,218 @@ export function AIReviewPage() {
           ))}
         </div>
       </motion.div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Selection Panel */}
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="space-y-6"
+        >
+          {/* Select Group */}
+          <div className="glass rounded-2xl p-6">
+            <h3 className="font-semibold mb-4 flex items-center gap-2">
+              <BookOpen className="w-5 h-5 text-primary" />
+              Select a Group
+            </h3>
+
+            {groupsLoading ? (
+              <div className="space-y-2">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="h-14 bg-secondary rounded-xl animate-pulse" />
+                ))}
+              </div>
+            ) : groups.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground mb-4">No groups yet</p>
+                <Link to="/groups">
+                  <button className="btn-primary">Create your first group</button>
+                </Link>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {groups.map((group) => (
+                  <motion.button
+                    key={group.id}
+                    whileHover={{ x: 4 }}
+                    onClick={() => {
+                      setSelectedGroup(group.id);
+                      setSelectedLesson(null);
+                      setGeneratedNote(null);
+                    }}
+                    className={`w-full p-4 rounded-xl text-left transition-all flex items-center gap-3 ${
+                      selectedGroup === group.id
+                        ? 'bg-primary/10 border-2 border-primary'
+                        : 'bg-secondary/50 hover:bg-secondary border-2 border-transparent'
+                    }`}
+                  >
+                    <span className="text-2xl">{group.icon || '📚'}</span>
+                    <div className="flex-1">
+                      <p className="font-medium">{group.name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {group.lessonsCount} lessons • {group.notesCount} notes
+                      </p>
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                  </motion.button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Select Lesson */}
+          <AnimatePresence>
+            {selectedGroup && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="glass rounded-2xl p-6"
+              >
+                <h3 className="font-semibold mb-4 flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-primary" />
+                  Select a Lesson
+                </h3>
+
+                {lessonsLoading ? (
+                  <div className="space-y-2">
+                    {[1, 2].map((i) => (
+                      <div key={i} className="h-14 bg-secondary rounded-xl animate-pulse" />
+                    ))}
+                  </div>
+                ) : lessons.length === 0 ? (
+                  <p className="text-muted-foreground text-center py-4">
+                    No lessons in this group yet
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {lessons.map((lesson) => {
+                      const userNotes = lesson.notes?.filter(n => !n.is_ai_generated).length || 0;
+                      return (
+                        <motion.button
+                          key={lesson.id}
+                          whileHover={{ x: 4 }}
+                          onClick={() => {
+                            setSelectedLesson(lesson.id);
+                            setGeneratedNote(null);
+                          }}
+                          className={`w-full p-4 rounded-xl text-left transition-all flex items-center gap-3 ${
+                            selectedLesson === lesson.id
+                              ? 'bg-primary/10 border-2 border-primary'
+                              : 'bg-secondary/50 hover:bg-secondary border-2 border-transparent'
+                          }`}
+                        >
+                          <BookOpen className="w-5 h-5 text-muted-foreground" />
+                          <div className="flex-1">
+                            <p className="font-medium">{lesson.name}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {userNotes} user notes • {lesson.notes?.filter(n => n.is_ai_generated).length || 0} AI notes
+                            </p>
+                          </div>
+                          <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                        </motion.button>
+                      );
+                    })}
+                  </div>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Generate Button */}
+          <AnimatePresence>
+            {selectedLesson && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 20 }}
+              >
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={handleGenerate}
+                  disabled={isGenerating || userNotesCount === 0}
+                  className="btn-primary w-full py-4 flex items-center justify-center gap-3 text-lg disabled:opacity-50"
+                >
+                  {isGenerating ? (
+                    <>
+                      <Loader2 className="w-6 h-6 animate-spin" />
+                      Generating AI Summary...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-6 h-6" />
+                      Generate AI Summary
+                    </>
+                  )}
+                </motion.button>
+                {userNotesCount === 0 && (
+                  <p className="text-sm text-muted-foreground text-center mt-2">
+                    Add some notes to this lesson first
+                  </p>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.div>
+
+        {/* Preview Panel */}
+        <motion.div
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="glass rounded-2xl p-6"
+        >
+          <h3 className="font-semibold mb-4 flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-primary" />
+            AI Output
+          </h3>
+
+          {isGenerating ? (
+            <div className="flex flex-col items-center justify-center py-16">
+              <div className="w-16 h-16 mb-6 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center glow">
+                <Sparkles className="w-8 h-8 text-primary-foreground animate-pulse" />
+              </div>
+              <h4 className="text-lg font-medium mb-2">Analyzing your notes...</h4>
+              <p className="text-muted-foreground text-sm text-center">
+                AI is reading, understanding, and creating a comprehensive summary
+              </p>
+            </div>
+          ) : generatedNote ? (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-success">
+                <CheckCircle className="w-5 h-5" />
+                <span className="font-medium">AI Summary Generated!</span>
+              </div>
+
+              <div className="p-4 bg-primary/5 rounded-xl border border-primary/20">
+                <h4 className="font-medium mb-2">{generatedNote.title}</h4>
+                <p className="text-sm text-muted-foreground line-clamp-6">
+                  {generatedNote.content?.slice(0, 500)}...
+                </p>
+              </div>
+
+              <Link to={`/notes/${generatedNote.id}`}>
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="btn-secondary w-full flex items-center justify-center gap-2"
+                >
+                  View Full Note
+                  <ChevronRight className="w-4 h-4" />
+                </motion.button>
+              </Link>
+            </div>
+          ) : (
+            <div className="text-center py-16 text-muted-foreground">
+              <Sparkles className="w-12 h-12 mx-auto mb-4 opacity-30" />
+              <p>Select a group and lesson, then click "Generate AI Summary"</p>
+              <p className="text-sm mt-2">
+                AI will analyze your notes and create a comprehensive summary
+              </p>
+            </div>
+          )}
+        </motion.div>
+      </div>
     </div>
   );
 }

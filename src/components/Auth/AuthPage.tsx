@@ -1,30 +1,47 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Brain, Mail, Lock, User, ArrowRight, Github, Chrome } from 'lucide-react';
+import { Brain, Mail, Lock, User, ArrowRight, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 
-interface AuthPageProps {
-  onSuccess: () => void;
-}
-
-export function AuthPage({ onSuccess }: AuthPageProps) {
+export function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const navigate = useNavigate();
+  const { signIn, signUp } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    
-    // Simulate auth - will be replaced with real auth
-    setTimeout(() => {
+    setError(null);
+    setSuccessMessage(null);
+
+    try {
+      if (isLogin) {
+        const { error } = await signIn(email, password);
+        if (error) {
+          setError(error.message);
+        } else {
+          navigate('/dashboard');
+        }
+      } else {
+        const { error } = await signUp(email, password, name);
+        if (error) {
+          setError(error.message);
+        } else {
+          setSuccessMessage('Account created! Please check your email to verify your account.');
+        }
+      }
+    } catch (err) {
+      setError('An unexpected error occurred');
+    } finally {
       setIsLoading(false);
-      onSuccess();
-      navigate('/dashboard');
-    }, 1500);
+    }
   };
 
   return (
@@ -99,7 +116,7 @@ export function AuthPage({ onSuccess }: AuthPageProps) {
           {/* Toggle */}
           <div className="glass rounded-2xl p-1 flex mb-8">
             <button
-              onClick={() => setIsLogin(true)}
+              onClick={() => { setIsLogin(true); setError(null); setSuccessMessage(null); }}
               className={`flex-1 py-3 rounded-xl font-medium transition-all duration-300 ${
                 isLogin ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
               }`}
@@ -107,7 +124,7 @@ export function AuthPage({ onSuccess }: AuthPageProps) {
               Sign In
             </button>
             <button
-              onClick={() => setIsLogin(false)}
+              onClick={() => { setIsLogin(false); setError(null); setSuccessMessage(null); }}
               className={`flex-1 py-3 rounded-xl font-medium transition-all duration-300 ${
                 !isLogin ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
               }`}
@@ -133,26 +150,28 @@ export function AuthPage({ onSuccess }: AuthPageProps) {
                   : 'Start your journey with Y Note'}
               </p>
 
-              {/* Social auth buttons */}
-              <div className="grid grid-cols-2 gap-4 mb-6">
-                <button className="btn-secondary flex items-center justify-center gap-2">
-                  <Chrome className="w-5 h-5" />
-                  Google
-                </button>
-                <button className="btn-secondary flex items-center justify-center gap-2">
-                  <Github className="w-5 h-5" />
-                  GitHub
-                </button>
-              </div>
+              {/* Error message */}
+              {error && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mb-6 p-4 rounded-xl bg-destructive/10 border border-destructive/20 flex items-start gap-3"
+                >
+                  <AlertCircle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
+                  <p className="text-sm text-destructive">{error}</p>
+                </motion.div>
+              )}
 
-              <div className="relative mb-6">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-border" />
-                </div>
-                <div className="relative flex justify-center text-sm">
-                  <span className="px-4 bg-background text-muted-foreground">or continue with email</span>
-                </div>
-              </div>
+              {/* Success message */}
+              {successMessage && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mb-6 p-4 rounded-xl bg-success/10 border border-success/20"
+                >
+                  <p className="text-sm text-success">{successMessage}</p>
+                </motion.div>
+              )}
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 {!isLogin && (
@@ -202,17 +221,13 @@ export function AuthPage({ onSuccess }: AuthPageProps) {
                       placeholder="••••••••"
                       className="input-glass w-full pl-12"
                       required
+                      minLength={6}
                     />
                   </div>
+                  {!isLogin && (
+                    <p className="text-xs text-muted-foreground mt-1">Password must be at least 6 characters</p>
+                  )}
                 </div>
-
-                {isLogin && (
-                  <div className="flex justify-end">
-                    <button type="button" className="text-sm text-primary hover:underline">
-                      Forgot password?
-                    </button>
-                  </div>
-                )}
 
                 <motion.button
                   type="submit"
