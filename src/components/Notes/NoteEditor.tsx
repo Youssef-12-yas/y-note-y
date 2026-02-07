@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ArrowLeft, 
@@ -10,18 +10,51 @@ import {
   List, 
   ListOrdered,
   Link2,
-  Image,
   Quote,
   Heading1,
   Heading2,
   Loader2,
-  Trash2
+  Trash2,
+  Eye,
+  Edit3
 } from 'lucide-react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { useNote, useUpdateNote, useDeleteNote } from '@/hooks/useNotes';
+import { useVerifyNote, type VerificationResult } from '@/hooks/useVerifyNote';
 import { formatDistanceToNow } from 'date-fns';
 import { toast } from 'sonner';
-import debounce from 'lodash.debounce';
+import { MarkdownRenderer } from './MarkdownRenderer';
+import { VerificationPanel } from './VerificationPanel';
+
+// Debounce utility to prevent freezing
+function useDebounce<T extends (...args: any[]) => any>(
+  callback: T,
+  delay: number
+): T {
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const debouncedFn = useCallback(
+    (...args: Parameters<T>) => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+      timeoutRef.current = setTimeout(() => {
+        callback(...args);
+      }, delay);
+    },
+    [callback, delay]
+  ) as T;
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
+
+  return debouncedFn;
+}
 
 export function NoteEditor() {
   const { noteId } = useParams();
@@ -30,22 +63,34 @@ export function NoteEditor() {
   const [title, setTitle] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [isPreviewMode, setIsPreviewMode] = useState(false);
+  const [verificationResult, setVerificationResult] = useState<VerificationResult | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const initialLoadRef = useRef(true);
 
   const { data: note, isLoading } = useNote(noteId);
   const updateNote = useUpdateNote();
   const deleteNote = useDeleteNote();
+  const verifyNote = useVerifyNote();
 
+  // Initialize content only once when note loads
   useEffect(() => {
-    if (note) {
+    if (note && initialLoadRef.current) {
       setTitle(note.title);
       setContent(note.content || '');
+      initialLoadRef.current = false;
     }
   }, [note]);
 
-  // Debounced auto-save
-  const debouncedSave = useCallback(
-    debounce(async (id: string, newTitle: string, newContent: string) => {
-      setIsSaving(true);
+  // Reset initial load ref when noteId changes
+  useEffect(() => {
+    initialLoadRef.current = true;
+    setVerificationResult(null);
+  }, [noteId]);
+
+  // Stable save function
+  const saveNote = useCallback(
+    async (id: string, newTitle: string, newContent: string) => {
       try {
         await updateNote.mutateAsync({
           id,
@@ -55,31 +100,40 @@ export function NoteEditor() {
         setHasUnsavedChanges(false);
       } catch (error) {
         console.error('Auto-save failed:', error);
-      } finally {
-        setIsSaving(false);
       }
-    }, 2000),
+    },
     [updateNote]
   );
 
-  const handleContentChange = (newContent: string) => {
-    setContent(newContent);
-    setHasUnsavedChanges(true);
-    if (noteId) {
-      debouncedSave(noteId, title, newContent);
-    }
-  };
+  // Debounced save - 1.5s delay to prevent freezing
+  const debouncedSave = useDebounce(saveNote, 1500);
 
-  const handleTitleChange = (newTitle: string) => {
-    setTitle(newTitle);
-    setHasUnsavedChanges(true);
-    if (noteId) {
-      debouncedSave(noteId, newTitle, content);
-    }
-  };
+  const handleContentChange = useCallback(
+    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+      const newContent = e.target.value;
+      setContent(newContent);
+      setHasUnsavedChanges(true);
+      if (noteId) {
+        debouncedSave(noteId, title, newContent);
+      }
+    },
+    [noteId, title, debouncedSave]
+  );
+
+  const handleTitleChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const newTitle = e.target.value;
+      setTitle(newTitle);
+      setHasUnsavedChanges(true);
+      if (noteId) {
+        debouncedSave(noteId, newTitle, content);
+      }
+    },
+    [noteId, content, debouncedSave]
+  );
 
   const handleSave = async () => {
-    if (!noteId) return;
+    if (!noteId || !note) return;
     setIsSaving(true);
     try {
       await updateNote.mutateAsync({
@@ -89,6 +143,23 @@ export function NoteEditor() {
       });
       setHasUnsavedChanges(false);
       toast.success('Note saved!');
+
+      // Trigger AI verification after manual save (only for user notes)
+      if (!note.is_ai_generated && content.trim().length > 20) {
+        verifyNote.mutate(
+          {
+            noteId,
+            noteTitle: title,
+            noteContent: content,
+            lessonId: note.lesson_id,
+          },
+          {
+            onSuccess: (data) => {
+              setVerificationResult(data.analysis);
+            },
+          }
+        );
+      }
     } finally {
       setIsSaving(false);
     }
@@ -105,34 +176,47 @@ export function NoteEditor() {
     }
   };
 
-  const toolbarButtons = [
-    { icon: Bold, label: 'Bold', action: () => insertText('**', '**') },
-    { icon: Italic, label: 'Italic', action: () => insertText('*', '*') },
-    { icon: Heading1, label: 'Heading 1', action: () => insertText('# ', '') },
-    { icon: Heading2, label: 'Heading 2', action: () => insertText('## ', '') },
-    { icon: List, label: 'Bullet List', action: () => insertText('- ', '') },
-    { icon: ListOrdered, label: 'Numbered List', action: () => insertText('1. ', '') },
-    { icon: Quote, label: 'Quote', action: () => insertText('> ', '') },
-    { icon: Code, label: 'Code', action: () => insertText('```\n', '\n```') },
-    { icon: Link2, label: 'Link', action: () => insertText('[', '](url)') },
-  ];
+  const insertText = useCallback(
+    (before: string, after: string) => {
+      const textarea = textareaRef.current;
+      if (!textarea) return;
 
-  const insertText = (before: string, after: string) => {
-    const textarea = document.querySelector('textarea');
-    if (!textarea) return;
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const selectedText = content.substring(start, end);
+      const newContent =
+        content.substring(0, start) + before + selectedText + after + content.substring(end);
 
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const selectedText = content.substring(start, end);
-    const newContent = content.substring(0, start) + before + selectedText + after + content.substring(end);
-    
-    handleContentChange(newContent);
-    
-    setTimeout(() => {
-      textarea.focus();
-      textarea.setSelectionRange(start + before.length, start + before.length + selectedText.length);
-    }, 0);
-  };
+      setContent(newContent);
+      setHasUnsavedChanges(true);
+
+      if (noteId) {
+        debouncedSave(noteId, title, newContent);
+      }
+
+      // Restore focus and selection
+      requestAnimationFrame(() => {
+        textarea.focus();
+        textarea.setSelectionRange(start + before.length, start + before.length + selectedText.length);
+      });
+    },
+    [content, noteId, title, debouncedSave]
+  );
+
+  const toolbarButtons = useMemo(
+    () => [
+      { icon: Bold, label: 'Bold', action: () => insertText('**', '**') },
+      { icon: Italic, label: 'Italic', action: () => insertText('*', '*') },
+      { icon: Heading1, label: 'Heading 1', action: () => insertText('# ', '') },
+      { icon: Heading2, label: 'Heading 2', action: () => insertText('## ', '') },
+      { icon: List, label: 'Bullet List', action: () => insertText('- ', '') },
+      { icon: ListOrdered, label: 'Numbered List', action: () => insertText('1. ', '') },
+      { icon: Quote, label: 'Quote', action: () => insertText('> ', '') },
+      { icon: Code, label: 'Code', action: () => insertText('```\n', '\n```') },
+      { icon: Link2, label: 'Link', action: () => insertText('[', '](url)') },
+    ],
+    [insertText]
+  );
 
   if (isLoading) {
     return (
@@ -159,11 +243,11 @@ export function NoteEditor() {
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex items-center justify-between mb-6"
+        className="flex items-center justify-between mb-4"
       >
         <div className="flex items-center gap-4">
-          <Link 
-            to={`/groups/${note.lesson?.group_id}`} 
+          <Link
+            to={`/groups/${note.lesson?.group_id}`}
             className="p-2 rounded-lg hover:bg-secondary transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
@@ -172,9 +256,10 @@ export function NoteEditor() {
             <input
               type="text"
               value={title}
-              onChange={(e) => handleTitleChange(e.target.value)}
+              onChange={handleTitleChange}
               className="text-2xl font-bold bg-transparent border-none outline-none focus:ring-0 w-full"
               placeholder="Note title..."
+              readOnly={note.is_ai_generated}
             />
             <p className="text-sm text-muted-foreground flex items-center gap-2">
               {note.lesson?.groups?.name} → {note.lesson?.name}
@@ -190,23 +275,36 @@ export function NoteEditor() {
 
         <div className="flex items-center gap-3">
           <span className="text-sm text-muted-foreground">
-            {hasUnsavedChanges ? 'Unsaved changes' : `Saved ${formatDistanceToNow(new Date(note.updated_at), { addSuffix: true })}`}
+            {hasUnsavedChanges
+              ? 'Unsaved changes'
+              : `Saved ${formatDistanceToNow(new Date(note.updated_at), { addSuffix: true })}`}
           </span>
-          
+
+          {/* Preview toggle */}
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            onClick={handleSave}
-            disabled={isSaving || !hasUnsavedChanges}
-            className="btn-secondary flex items-center gap-2 disabled:opacity-50"
+            onClick={() => setIsPreviewMode(!isPreviewMode)}
+            className={`p-2 rounded-lg transition-colors ${
+              isPreviewMode ? 'bg-primary/10 text-primary' : 'hover:bg-secondary text-muted-foreground'
+            }`}
+            title={isPreviewMode ? 'Edit mode' : 'Preview mode'}
           >
-            {isSaving ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Save className="w-4 h-4" />
-            )}
-            Save
+            {isPreviewMode ? <Edit3 className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
           </motion.button>
+
+          {!note.is_ai_generated && (
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={handleSave}
+              disabled={isSaving || !hasUnsavedChanges}
+              className="btn-secondary flex items-center gap-2 disabled:opacity-50"
+            >
+              {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              Save
+            </motion.button>
+          )}
 
           <motion.button
             whileHover={{ scale: 1.02 }}
@@ -219,8 +317,13 @@ export function NoteEditor() {
         </div>
       </motion.div>
 
-      {/* Toolbar */}
+      {/* AI Verification Panel */}
       {!note.is_ai_generated && (
+        <VerificationPanel result={verificationResult} isLoading={verifyNote.isPending} />
+      )}
+
+      {/* Toolbar */}
+      {!note.is_ai_generated && !isPreviewMode && (
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -242,20 +345,44 @@ export function NoteEditor() {
         </motion.div>
       )}
 
-      {/* Editor */}
+      {/* Editor / Preview */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.2 }}
-        className="flex-1 glass rounded-2xl p-6 overflow-hidden flex flex-col"
+        className={`flex-1 glass rounded-2xl overflow-hidden flex flex-col ${
+          note.is_ai_generated ? 'ai-note-container' : ''
+        }`}
       >
-        <textarea
-          value={content}
-          onChange={(e) => handleContentChange(e.target.value)}
-          className="flex-1 bg-transparent border-none outline-none resize-none font-mono text-sm leading-relaxed"
-          placeholder="Start writing your notes..."
-          readOnly={note.is_ai_generated}
-        />
+        <AnimatePresence mode="wait">
+          {isPreviewMode || note.is_ai_generated ? (
+            <motion.div
+              key="preview"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="flex-1 overflow-auto p-6"
+            >
+              <MarkdownRenderer content={content} className="note-content" />
+            </motion.div>
+          ) : (
+            <motion.div
+              key="editor"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="flex-1 p-6 flex flex-col"
+            >
+              <textarea
+                ref={textareaRef}
+                value={content}
+                onChange={handleContentChange}
+                className="flex-1 bg-transparent border-none outline-none resize-none font-mono text-sm leading-relaxed"
+                placeholder="Start writing your notes..."
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.div>
     </div>
   );

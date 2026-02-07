@@ -9,9 +9,12 @@ import {
   Sparkles,
   Clock,
   ChevronRight,
+  ChevronDown,
   X,
   Trash2,
-  Loader2
+  Loader2,
+  GraduationCap,
+  Lightbulb
 } from 'lucide-react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { useGroup } from '@/hooks/useGroups';
@@ -20,10 +23,10 @@ import { useCreateNote, useGenerateAINote } from '@/hooks/useNotes';
 import { formatDistanceToNow } from 'date-fns';
 
 const gradientColors = [
-  'from-blue-500 to-cyan-500',
-  'from-purple-500 to-pink-500',
-  'from-orange-500 to-red-500',
-  'from-green-500 to-teal-500',
+  'from-[hsl(var(--gradient-start))] to-[hsl(var(--gradient-end))]',
+  'from-[hsl(270_70%_60%)] to-[hsl(320_70%_60%)]',
+  'from-[hsl(30_90%_50%)] to-[hsl(0_90%_50%)]',
+  'from-[hsl(150_70%_40%)] to-[hsl(180_70%_40%)]',
 ];
 
 export function GroupDetail() {
@@ -76,7 +79,7 @@ export function GroupDetail() {
 
   const handleGenerateAI = async (lessonId: string, notes: { title: string; content: string | null }[]) => {
     const userNotes = notes
-      .filter(n => !n.title.startsWith('🤖'))
+      .filter(n => !n.title.startsWith('🤖') && !n.title.startsWith('✨'))
       .map(n => ({ title: n.title, content: n.content || '' }));
 
     if (userNotes.length === 0) {
@@ -130,7 +133,7 @@ export function GroupDetail() {
 
         {/* Group info */}
         <div className="flex items-start gap-4">
-          <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${gradientColors[0]} flex items-center justify-center text-3xl`}>
+          <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${gradientColors[0]} flex items-center justify-center text-3xl shadow-lg`}>
             {group.icon || '📚'}
           </div>
           <div className="flex-1">
@@ -193,8 +196,10 @@ export function GroupDetail() {
         <div className="space-y-4">
           <AnimatePresence>
             {filteredLessons.map((lesson, index) => {
-              const hasAINotes = lesson.notes?.some(n => n.is_ai_generated);
+              const userNotes = lesson.notes?.filter(n => !n.is_ai_generated) || [];
+              const aiNotes = lesson.notes?.filter(n => n.is_ai_generated) || [];
               const isGenerating = generatingAI === lesson.id;
+              const isExpanded = expandedLesson === lesson.id;
 
               return (
                 <motion.div
@@ -206,27 +211,27 @@ export function GroupDetail() {
                 >
                   {/* Lesson Header */}
                   <motion.div
-                    onClick={() => setExpandedLesson(expandedLesson === lesson.id ? null : lesson.id)}
+                    onClick={() => setExpandedLesson(isExpanded ? null : lesson.id)}
                     className="p-5 cursor-pointer hover:bg-secondary/30 transition-colors flex items-center gap-4"
                   >
-                    <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center shrink-0">
-                      <BookOpen className="w-5 h-5 text-muted-foreground" />
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center shrink-0">
+                      <GraduationCap className="w-6 h-6 text-primary" />
                     </div>
 
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-semibold truncate">{lesson.name}</h3>
-                        {hasAINotes && (
-                          <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs flex items-center gap-1">
+                        <h3 className="font-semibold text-lg truncate">{lesson.name}</h3>
+                        {aiNotes.length > 0 && (
+                          <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs flex items-center gap-1 shrink-0">
                             <Sparkles className="w-3 h-3" />
-                            AI Enhanced
+                            {aiNotes.length} AI
                           </span>
                         )}
                       </div>
                       <div className="flex items-center gap-4 text-sm text-muted-foreground">
                         <span className="flex items-center gap-1">
                           <FileText className="w-3.5 h-3.5" />
-                          {lesson.notesCount || 0} notes
+                          {userNotes.length} notes
                         </span>
                         <span className="flex items-center gap-1">
                           <Clock className="w-3.5 h-3.5" />
@@ -236,13 +241,15 @@ export function GroupDetail() {
                     </div>
 
                     <div className="flex items-center gap-2">
-                      <button
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
                         onClick={(e) => {
                           e.stopPropagation();
                           handleGenerateAI(lesson.id, lesson.notes || []);
                         }}
                         disabled={isGenerating}
-                        className="p-2 rounded-lg hover:bg-primary/10 text-primary transition-colors disabled:opacity-50"
+                        className="p-2.5 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary transition-colors disabled:opacity-50"
                         title="Generate AI Summary"
                       >
                         {isGenerating ? (
@@ -250,7 +257,7 @@ export function GroupDetail() {
                         ) : (
                           <Sparkles className="w-5 h-5" />
                         )}
-                      </button>
+                      </motion.button>
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -260,15 +267,18 @@ export function GroupDetail() {
                       >
                         <Trash2 className="w-5 h-5" />
                       </button>
-                      <ChevronRight className={`w-5 h-5 text-muted-foreground transition-transform ${
-                        expandedLesson === lesson.id ? 'rotate-90' : ''
-                      }`} />
+                      <motion.div
+                        animate={{ rotate: isExpanded ? 90 : 0 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                      </motion.div>
                     </div>
                   </motion.div>
 
-                  {/* Expanded Notes */}
+                  {/* Expanded Content */}
                   <AnimatePresence>
-                    {expandedLesson === lesson.id && (
+                    {isExpanded && (
                       <motion.div
                         initial={{ height: 0, opacity: 0 }}
                         animate={{ height: 'auto', opacity: 1 }}
@@ -276,56 +286,93 @@ export function GroupDetail() {
                         transition={{ duration: 0.2 }}
                         className="border-t border-border/50"
                       >
-                        <div className="p-4 space-y-2">
-                          {lesson.notes && lesson.notes.length > 0 ? (
-                            lesson.notes.map((note) => (
-                              <Link key={note.id} to={`/notes/${note.id}`}>
-                                <motion.div
-                                  whileHover={{ x: 4 }}
-                                  className={`p-3 rounded-xl transition-colors flex items-center gap-3 cursor-pointer ${
-                                    note.is_ai_generated 
-                                      ? 'bg-primary/5 hover:bg-primary/10 border border-primary/20' 
-                                      : 'hover:bg-secondary/30'
-                                  }`}
-                                >
-                                  {note.is_ai_generated ? (
-                                    <Sparkles className="w-4 h-4 text-primary shrink-0" />
-                                  ) : (
-                                    <FileText className="w-4 h-4 text-muted-foreground shrink-0" />
-                                  )}
-                                  <div className="flex-1 min-w-0">
-                                    <p className="font-medium text-sm truncate flex items-center gap-2">
-                                      {note.title}
-                                      {note.is_ai_generated && (
-                                        <span className="text-xs px-1.5 py-0.5 rounded bg-primary/10 text-primary">AI Generated</span>
-                                      )}
-                                    </p>
-                                    <p className="text-xs text-muted-foreground truncate">
-                                      {note.content?.slice(0, 100) || 'Empty note'}
-                                    </p>
-                                  </div>
-                                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                                </motion.div>
-                              </Link>
-                            ))
-                          ) : (
-                            <p className="text-sm text-muted-foreground text-center py-4">
-                              No notes yet. Add your first note!
-                            </p>
+                        <div className="p-5 space-y-6">
+                          {/* AI Generated Notes Section */}
+                          {aiNotes.length > 0 && (
+                            <div>
+                              <div className="flex items-center gap-2 mb-3">
+                                <Lightbulb className="w-4 h-4 text-primary" />
+                                <h4 className="text-sm font-semibold text-primary">AI Learning Content</h4>
+                              </div>
+                              <div className="space-y-2">
+                                {aiNotes.map((note) => (
+                                  <Link key={note.id} to={`/notes/${note.id}`}>
+                                    <motion.div
+                                      whileHover={{ scale: 1.01, x: 4 }}
+                                      className="p-4 rounded-xl bg-gradient-to-r from-primary/10 via-primary/5 to-accent/5 
+                                                 border border-primary/20 hover:border-primary/40 transition-all 
+                                                 cursor-pointer group"
+                                    >
+                                      <div className="flex items-start gap-3">
+                                        <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center shrink-0">
+                                          <Sparkles className="w-5 h-5 text-primary" />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                          <p className="font-medium text-foreground group-hover:text-primary transition-colors truncate">
+                                            {note.title}
+                                          </p>
+                                          <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                                            {note.content?.slice(0, 150) || 'AI generated learning content'}
+                                          </p>
+                                        </div>
+                                        <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors shrink-0 mt-2" />
+                                      </div>
+                                    </motion.div>
+                                  </Link>
+                                ))}
+                              </div>
+                            </div>
                           )}
 
-                          {/* Add new note */}
-                          <motion.button
-                            whileHover={{ x: 4 }}
-                            onClick={() => handleAddNote(lesson.id)}
-                            disabled={createNote.isPending}
-                            className="w-full p-3 rounded-xl border border-dashed border-border/50 hover:border-primary/50 
-                                       hover:bg-primary/5 transition-all flex items-center justify-center gap-2 text-muted-foreground 
-                                       hover:text-primary text-sm disabled:opacity-50"
-                          >
-                            <Plus className="w-4 h-4" />
-                            Add Note
-                          </motion.button>
+                          {/* User Notes Section */}
+                          <div>
+                            <div className="flex items-center gap-2 mb-3">
+                              <FileText className="w-4 h-4 text-muted-foreground" />
+                              <h4 className="text-sm font-semibold text-muted-foreground">Your Notes</h4>
+                            </div>
+                            
+                            {userNotes.length > 0 ? (
+                              <div className="grid gap-2">
+                                {userNotes.map((note) => (
+                                  <Link key={note.id} to={`/notes/${note.id}`}>
+                                    <motion.div
+                                      whileHover={{ x: 4 }}
+                                      className="p-3 rounded-xl hover:bg-secondary/50 transition-all flex items-center gap-3 cursor-pointer group"
+                                    >
+                                      <FileText className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors shrink-0" />
+                                      <div className="flex-1 min-w-0">
+                                        <p className="font-medium text-sm truncate group-hover:text-primary transition-colors">
+                                          {note.title}
+                                        </p>
+                                        <p className="text-xs text-muted-foreground truncate">
+                                          {note.content?.slice(0, 80) || 'Empty note'}
+                                        </p>
+                                      </div>
+                                      <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                                    </motion.div>
+                                  </Link>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-sm text-muted-foreground text-center py-4">
+                                No notes yet. Add your first note!
+                              </p>
+                            )}
+
+                            {/* Add new note */}
+                            <motion.button
+                              whileHover={{ scale: 1.01 }}
+                              whileTap={{ scale: 0.99 }}
+                              onClick={() => handleAddNote(lesson.id)}
+                              disabled={createNote.isPending}
+                              className="w-full mt-3 p-3 rounded-xl border border-dashed border-border/50 hover:border-primary/50 
+                                         hover:bg-primary/5 transition-all flex items-center justify-center gap-2 text-muted-foreground 
+                                         hover:text-primary text-sm disabled:opacity-50"
+                            >
+                              <Plus className="w-4 h-4" />
+                              Add Note
+                            </motion.button>
+                          </div>
                         </div>
                       </motion.div>
                     )}
