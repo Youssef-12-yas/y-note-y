@@ -173,6 +173,82 @@
   .mono {
     font-family: 'JetBrains Mono', monospace;
   }
+
+  /* Markdown content styling */
+  .markdown-content {
+    @apply text-foreground leading-relaxed;
+  }
+
+  .markdown-content .md-h1 {
+    @apply text-2xl font-bold mb-4 mt-6 gradient-text;
+  }
+
+  .markdown-content .md-h2 {
+    @apply text-xl font-semibold mb-3 mt-5 text-foreground;
+  }
+
+  .markdown-content .md-h3 {
+    @apply text-lg font-medium mb-2 mt-4 text-foreground;
+  }
+
+  .markdown-content .md-p {
+    @apply mb-4 text-foreground/90;
+  }
+
+  .markdown-content .md-ul,
+  .markdown-content .md-ol {
+    @apply mb-4 pl-6 space-y-2;
+  }
+
+  .markdown-content .md-uli {
+    @apply list-disc text-foreground/90;
+  }
+
+  .markdown-content .md-oli {
+    @apply list-decimal text-foreground/90;
+  }
+
+  .markdown-content .md-quote {
+    @apply border-l-4 border-primary/50 pl-4 py-2 my-4 italic text-muted-foreground bg-primary/5 rounded-r-lg;
+  }
+
+  .markdown-content .md-link {
+    @apply text-primary hover:text-primary/80 underline underline-offset-2 transition-colors;
+  }
+
+  .markdown-content .md-hr {
+    @apply my-6 border-t border-border/50;
+  }
+
+  .markdown-content .code-block {
+    @apply my-4 rounded-xl overflow-hidden bg-[hsl(var(--surface-1))] border border-border/50;
+  }
+
+  .markdown-content .code-block .code-lang {
+    @apply block px-4 py-2 text-xs font-medium text-muted-foreground bg-[hsl(var(--surface-2))] border-b border-border/50;
+  }
+
+  .markdown-content .code-block pre {
+    @apply p-4 overflow-x-auto;
+  }
+
+  .markdown-content .code-block code {
+    @apply font-mono text-sm text-primary/90;
+  }
+
+  .markdown-content .inline-code {
+    @apply px-1.5 py-0.5 rounded bg-primary/10 text-primary font-mono text-sm;
+  }
+
+  /* AI Note container styling */
+  .ai-note-container {
+    @apply border border-primary/20;
+    background: linear-gradient(135deg, hsl(var(--primary) / 0.03), hsl(var(--accent) / 0.03));
+  }
+
+  .note-content {
+    @apply max-w-none;
+  }
 }
 
 @layer utilities {
