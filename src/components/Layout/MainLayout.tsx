@@ -1,5 +1,6 @@
 import { ReactNode } from 'react';
 import { Sidebar } from './Sidebar';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -7,11 +8,13 @@ interface MainLayoutProps {
 }
 
 export function MainLayout({ children, onLogout }: MainLayoutProps) {
+  const isMobile = useIsMobile();
+
   return (
     <div className="min-h-screen bg-background">
       <Sidebar onLogout={onLogout} />
-      <main className="pl-64 transition-all duration-300">
-        <div className="p-8 max-w-6xl mx-auto">
+      <main className={`transition-all duration-300 ${isMobile ? 'pl-0 pt-16' : 'pl-64'}`}>
+        <div className={`mx-auto max-w-6xl ${isMobile ? 'p-4' : 'p-8'}`}>
           {children}
         </div>
       </main>

@@ -89,7 +89,7 @@ export function AIReviewPage() {
           <Brain className="w-5 h-5 text-primary" />
           Multi-Agent AI System
         </h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4">
           {[
             { name: 'Validator', desc: 'Checks accuracy', icon: '✓' },
             { name: 'Teacher', desc: 'Explains concepts', icon: '📚' },

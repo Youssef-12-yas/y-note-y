@@ -87,7 +87,7 @@ export function GroupsPage() {
               placeholder="Search groups..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="input-glass pl-10 pr-4 py-2 w-64"
+              className="input-glass pl-10 pr-4 py-2 w-full sm:w-64"
             />
           </div>
 

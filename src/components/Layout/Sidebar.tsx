@@ -1,4 +1,4 @@
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Brain, 
   Home, 
@@ -8,11 +8,14 @@ import {
   Plus, 
   LogOut,
   Sparkles,
-  ChevronDown
+  ChevronDown,
+  Menu,
+  X
 } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface SidebarProps {
   onLogout: () => void;
@@ -29,11 +32,122 @@ export function Sidebar({ onLogout }: SidebarProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const { profile, user } = useAuth();
+  const isMobile = useIsMobile();
 
   const displayName = profile?.full_name || user?.email?.split('@')[0] || 'User';
   const initials = displayName.slice(0, 2).toUpperCase();
 
+  const closeMobile = () => setMobileOpen(false);
+
+  // Mobile: hamburger button + drawer overlay
+  if (isMobile) {
+    return (
+      <>
+        {/* Mobile hamburger */}
+        <button
+          onClick={() => setMobileOpen(true)}
+          className="fixed top-4 left-4 z-50 p-2.5 rounded-xl glass"
+          aria-label="Open menu"
+        >
+          <Menu className="w-5 h-5" />
+        </button>
+
+        {/* Overlay */}
+        <AnimatePresence>
+          {mobileOpen && (
+            <>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 bg-background/60 backdrop-blur-sm z-50"
+                onClick={closeMobile}
+              />
+              <motion.aside
+                initial={{ x: -280 }}
+                animate={{ x: 0 }}
+                exit={{ x: -280 }}
+                transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                className="fixed left-0 top-0 h-full w-72 glass border-r border-border/50 z-50 flex flex-col"
+              >
+                {/* Close */}
+                <div className="p-4 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shrink-0">
+                      <Brain className="w-5 h-5 text-primary-foreground" />
+                    </div>
+                    <span className="text-xl font-bold gradient-text">Y Note</span>
+                  </div>
+                  <button onClick={closeMobile} className="p-2 rounded-lg hover:bg-secondary">
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                {/* New button */}
+                <div className="px-4 mb-4">
+                  <button
+                    onClick={() => { navigate('/groups'); closeMobile(); }}
+                    className="btn-primary w-full flex items-center justify-center gap-2"
+                  >
+                    <Plus className="w-5 h-5" />
+                    <span>New Group</span>
+                  </button>
+                </div>
+
+                {/* Nav */}
+                <nav className="flex-1 px-3">
+                  <ul className="space-y-1">
+                    {navItems.map((item) => {
+                      const isActive = location.pathname === item.path;
+                      return (
+                        <li key={item.path}>
+                          <Link
+                            to={item.path}
+                            onClick={closeMobile}
+                            className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 ${
+                              isActive
+                                ? 'bg-primary/10 text-primary'
+                                : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
+                            }`}
+                          >
+                            <item.icon className={`w-5 h-5 shrink-0 ${isActive ? 'text-primary' : ''}`} />
+                            <span className="font-medium">{item.label}</span>
+                          </Link>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </nav>
+
+                {/* User */}
+                <div className="p-4 border-t border-border/50">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/50 to-accent/50 flex items-center justify-center shrink-0">
+                      <span className="text-sm font-semibold">{initials}</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium truncate">{displayName}</p>
+                      <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+                    </div>
+                    <button
+                      onClick={onLogout}
+                      className="p-2 text-muted-foreground hover:text-destructive transition-colors rounded-lg hover:bg-destructive/10"
+                    >
+                      <LogOut className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              </motion.aside>
+            </>
+          )}
+        </AnimatePresence>
+      </>
+    );
+  }
+
+  // Desktop: original fixed sidebar
   return (
     <motion.aside
       initial={{ x: -100, opacity: 0 }}
