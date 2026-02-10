@@ -243,40 +243,40 @@ export function NoteEditor() {
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex items-center justify-between mb-4"
+        className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4"
       >
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3 min-w-0">
           <Link
             to={`/groups/${note.lesson?.group_id}`}
-            className="p-2 rounded-lg hover:bg-secondary transition-colors"
+            className="p-2 rounded-lg hover:bg-secondary transition-colors shrink-0"
           >
             <ArrowLeft className="w-5 h-5" />
           </Link>
-          <div>
+          <div className="min-w-0 flex-1">
             <input
               type="text"
               value={title}
               onChange={handleTitleChange}
-              className="text-2xl font-bold bg-transparent border-none outline-none focus:ring-0 w-full"
+              className="text-xl sm:text-2xl font-bold bg-transparent border-none outline-none focus:ring-0 w-full"
               placeholder="Note title..."
               readOnly={note.is_ai_generated}
             />
-            <p className="text-sm text-muted-foreground flex items-center gap-2">
-              {note.lesson?.groups?.name} → {note.lesson?.name}
+            <p className="text-xs sm:text-sm text-muted-foreground flex items-center gap-2 truncate">
+              <span className="truncate">{note.lesson?.groups?.name} → {note.lesson?.name}</span>
               {note.is_ai_generated && (
-                <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs flex items-center gap-1">
+                <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs flex items-center gap-1 shrink-0">
                   <Sparkles className="w-3 h-3" />
-                  AI Generated
+                  AI
                 </span>
               )}
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <span className="text-sm text-muted-foreground">
+        <div className="flex items-center gap-2 shrink-0 ml-auto sm:ml-0">
+          <span className="text-xs sm:text-sm text-muted-foreground hidden sm:inline">
             {hasUnsavedChanges
-              ? 'Unsaved changes'
+              ? 'Unsaved'
               : `Saved ${formatDistanceToNow(new Date(note.updated_at), { addSuffix: true })}`}
           </span>
 
@@ -299,10 +299,10 @@ export function NoteEditor() {
               whileTap={{ scale: 0.98 }}
               onClick={handleSave}
               disabled={isSaving || !hasUnsavedChanges}
-              className="btn-secondary flex items-center gap-2 disabled:opacity-50"
+              className="btn-secondary flex items-center gap-2 disabled:opacity-50 px-3 py-2 sm:px-6 sm:py-3"
             >
               {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-              Save
+              <span className="hidden sm:inline">Save</span>
             </motion.button>
           )}
 
@@ -328,7 +328,7 @@ export function NoteEditor() {
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="glass rounded-xl p-2 flex items-center gap-1 mb-4"
+          className="glass rounded-xl p-2 flex items-center gap-1 mb-4 overflow-x-auto"
         >
           {toolbarButtons.map((button) => (
             <motion.button
@@ -361,7 +361,7 @@ export function NoteEditor() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="flex-1 overflow-auto p-6"
+              className="flex-1 overflow-auto p-4 sm:p-6"
             >
               <MarkdownRenderer content={content} className="note-content" />
             </motion.div>
@@ -371,7 +371,7 @@ export function NoteEditor() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="flex-1 p-6 flex flex-col"
+              className="flex-1 p-4 sm:p-6 flex flex-col"
             >
               <textarea
                 ref={textareaRef}
