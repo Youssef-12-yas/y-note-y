@@ -1,5 +1,9 @@
 name: Deploy to GitHub Pages
 
+# صراحة صلاحيات كتابة المحتويات ضرورية لكي يقدر action يدفع gh-pages
+permissions:
+  contents: write
+
 on:
   push:
     branches:
@@ -39,7 +43,6 @@ jobs:
 
       - name: Detect publish directory
         run: |
-          # determine publish dir locally and also export it for next steps
           if [ -d "./dist" ]; then
             PUBLISH_DIR="./dist"
           elif [ -d "./build" ]; then
@@ -49,7 +52,6 @@ jobs:
           else
             PUBLISH_DIR="./dist"
           fi
-
           echo "PUBLISH_DIR=$PUBLISH_DIR" >> $GITHUB_ENV
           echo "Publish directory is $PUBLISH_DIR"
         shell: bash
@@ -59,6 +61,12 @@ jobs:
           echo "Listing $PUBLISH_DIR"
           ls -la "$PUBLISH_DIR" || true
         shell: bash
+
+      # <-- إعداد git user قبل أي عمليات commit / push
+      - name: Configure git user
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
