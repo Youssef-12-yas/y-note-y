@@ -1,17 +1,49 @@
-  - name: Use Node.js
-    uses: actions/setup-node@v4
-    with:
-      node-version: '20'
+name: Deploy to GitHub Pages
 
-  - name: Install dependencies
-    run: npm ci
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch: {}
 
-  - name: Build
-    run: npm run build
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-  - name: Deploy to GitHub Pages
-    uses: peaceiris/actions-gh-pages@v3
-    with:
-      github_token: ${{ secrets.GITHUB_TOKEN }}
-      publish_dir: ./dist
-      publish_branch: gh-pages
+      - name: Use Node.js 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Detect publish directory
+        run: |
+          if [ -d "./dist" ]; then echo "PUBLISH_DIR=./dist" >> $GITHUB_ENV
+          elif [ -d "./build" ]; then echo "PUBLISH_DIR=./build" >> $GITHUB_ENV
+          elif [ -d "./out" ]; then echo "PUBLISH_DIR=./out" >> $GITHUB_ENV
+          else echo "PUBLISH_DIR=./dist" >> $GITHUB_ENV
+          echo "Publish directory is $PUBLISH_DIR"
+        shell: bash
+
+      - name: Show files in publish directory (debug)
+        run: |
+          echo "Listing $PUBLISH_DIR"
+          ls -la $PUBLISH_DIR || true
+        shell: bash
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ${{ env.PUBLISH_DIR }}
+          publish_branch: gh-pages
