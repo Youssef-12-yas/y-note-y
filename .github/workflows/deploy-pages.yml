@@ -39,17 +39,25 @@ jobs:
 
       - name: Detect publish directory
         run: |
-          if [ -d "./dist" ]; then echo "PUBLISH_DIR=./dist" >> $GITHUB_ENV
-          elif [ -d "./build" ]; then echo "PUBLISH_DIR=./build" >> $GITHUB_ENV
-          elif [ -d "./out" ]; then echo "PUBLISH_DIR=./out" >> $GITHUB_ENV
-          else echo "PUBLISH_DIR=./dist" >> $GITHUB_ENV
+          # determine publish dir locally and also export it for next steps
+          if [ -d "./dist" ]; then
+            PUBLISH_DIR="./dist"
+          elif [ -d "./build" ]; then
+            PUBLISH_DIR="./build"
+          elif [ -d "./out" ]; then
+            PUBLISH_DIR="./out"
+          else
+            PUBLISH_DIR="./dist"
+          fi
+
+          echo "PUBLISH_DIR=$PUBLISH_DIR" >> $GITHUB_ENV
           echo "Publish directory is $PUBLISH_DIR"
         shell: bash
 
       - name: Show files in publish directory (debug)
         run: |
           echo "Listing $PUBLISH_DIR"
-          ls -la $PUBLISH_DIR || true
+          ls -la "$PUBLISH_DIR" || true
         shell: bash
 
       - name: Deploy to GitHub Pages
