@@ -298,8 +298,8 @@ export function NoteEditor() {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={handleSave}
-              disabled={isSaving || !hasUnsavedChanges}
-              className="btn-secondary flex items-center gap-2 disabled:opacity-50 px-3 py-2 sm:px-6 sm:py-3"
+              disabled={isSaving}
+              className="btn-secondary flex items-center gap-2 disabled:opacity-60 px-3 py-2 sm:px-6 sm:py-3"
             >
               {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
               <span className="hidden sm:inline">Save</span>
