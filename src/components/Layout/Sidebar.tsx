@@ -45,14 +45,48 @@ export function Sidebar({ onLogout }: SidebarProps) {
   if (isMobile) {
     return (
       <>
-        {/* Mobile hamburger */}
-        <button
-          onClick={() => setMobileOpen(true)}
-          className="fixed top-4 left-4 z-50 p-2.5 rounded-xl glass"
-          aria-label="Open menu"
-        >
-          <Menu className="w-5 h-5" />
-        </button>
+        {/* Mobile top bar */}
+        <header className="fixed top-0 inset-x-0 h-14 z-40 glass border-b border-border/50 flex items-center justify-between px-4">
+          <button
+            onClick={() => setMobileOpen(true)}
+            className="p-2 -ml-2 rounded-lg hover:bg-secondary/60 transition-colors"
+            aria-label="Open menu"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+          <Link to="/dashboard" className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-primary to-accent flex items-center justify-center">
+              <Brain className="w-4 h-4 text-primary-foreground" />
+            </div>
+            <span className="text-base font-bold gradient-text">P-Note</span>
+          </Link>
+          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary/50 to-accent/50 flex items-center justify-center">
+            <span className="text-xs font-semibold">{initials}</span>
+          </div>
+        </header>
+
+        {/* Mobile bottom tab bar */}
+        <nav className="fixed bottom-0 inset-x-0 z-40 glass border-t border-border/50 pb-[env(safe-area-inset-bottom)]">
+          <ul className="flex items-stretch justify-around">
+            {navItems.map((item) => {
+              const isActive = location.pathname === item.path
+                || (item.path !== '/dashboard' && location.pathname.startsWith(item.path));
+              return (
+                <li key={item.path} className="flex-1">
+                  <Link
+                    to={item.path}
+                    className={`flex flex-col items-center justify-center gap-0.5 py-2.5 transition-colors ${
+                      isActive ? 'text-primary' : 'text-muted-foreground'
+                    }`}
+                  >
+                    <item.icon className="w-5 h-5" />
+                    <span className="text-[10px] font-medium leading-none">{item.label}</span>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
 
         {/* Overlay */}
         <AnimatePresence>
