@@ -260,7 +260,7 @@ export function SettingsPage() {
         transition={{ delay: 0.6 }}
         className="mt-8 text-center text-sm text-muted-foreground"
       >
-        <p>Y Note v1.0.0</p>
+         <p>P-Note v1.0.0</p>
         <p className="mt-1">© 2024 YouAsas. All rights reserved.</p>
       </motion.div>
     </div>

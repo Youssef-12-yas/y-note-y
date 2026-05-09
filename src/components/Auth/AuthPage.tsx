@@ -66,7 +66,7 @@ export function AuthPage() {
               <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center">
                 <Brain className="w-6 h-6 text-primary-foreground" />
               </div>
-              <span className="text-2xl font-bold gradient-text">Y Note</span>
+               <span className="text-2xl font-bold gradient-text">P-Note</span>
             </div>
             
             <h1 className="text-4xl xl:text-5xl font-bold mb-6 leading-tight">
@@ -110,7 +110,7 @@ export function AuthPage() {
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center">
               <Brain className="w-5 h-5 text-primary-foreground" />
             </div>
-            <span className="text-xl font-bold gradient-text">Y Note</span>
+             <span className="text-xl font-bold gradient-text">P-Note</span>
           </div>
 
           {/* Toggle */}
@@ -146,8 +146,8 @@ export function AuthPage() {
               </h2>
               <p className="text-muted-foreground mb-8">
                 {isLogin 
-                  ? 'Enter your credentials to continue' 
-                  : 'Start your journey with Y Note'}
+                   ? 'Enter your credentials to continue'
+                   : 'Start your journey with P-Note'}
               </p>
 
               {/* Error message */}
