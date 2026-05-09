@@ -72,7 +72,7 @@ serve(async (req) => {
       .map((note: { title: string; content: string }) => `## ${note.title}\n${note.content}`)
       .join("\n\n---\n\n");
 
-    const systemPrompt = `You are an expert AI tutor and mentor for Y Note, an intelligent note-taking application. 
+     const systemPrompt = `You are an expert AI tutor and mentor for P-Note, an intelligent note-taking application. 
 Your role is to analyze the user's notes and create a comprehensive, educational response that:
 
 1. VALIDATES their understanding - confirm what they got right

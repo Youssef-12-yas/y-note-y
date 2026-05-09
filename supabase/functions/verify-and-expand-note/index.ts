@@ -67,7 +67,7 @@ serve(async (req) => {
       );
     }
 
-    const systemPrompt = `You are an expert AI learning assistant for Y Note. Your job is to analyze student notes and provide intelligent feedback in a structured JSON format.
+     const systemPrompt = `You are an expert AI learning assistant for P-Note. Your job is to analyze student notes and provide intelligent feedback in a structured JSON format.
 
 CRITICAL: You must respond ONLY with valid JSON, no other text.
 
