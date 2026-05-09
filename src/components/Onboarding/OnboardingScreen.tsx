@@ -11,7 +11,7 @@ const slides = [
     icon: Brain,
     title: "Think Deeper",
     subtitle: "Your ideas deserve intelligence",
-    description: "Y Note is your AI-powered thinking companion that helps you organize, validate, and expand your knowledge.",
+    description: "P-Note is your AI-powered thinking companion that helps you organize, validate, and expand your knowledge.",
     gradient: "from-primary to-accent",
   },
   {
@@ -115,7 +115,7 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
               transition={{ delay: 0.4, duration: 0.5 }}
               className="text-5xl md:text-7xl font-bold gradient-text mb-4"
             >
-              Y Note
+              P-Note
             </motion.h1>
 
             {/* Tagline */}
