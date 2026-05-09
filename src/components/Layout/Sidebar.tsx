@@ -78,7 +78,7 @@ export function Sidebar({ onLogout }: SidebarProps) {
                     <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shrink-0">
                       <Brain className="w-5 h-5 text-primary-foreground" />
                     </div>
-                    <span className="text-xl font-bold gradient-text">Y Note</span>
+                    <span className="text-xl font-bold gradient-text">P-Note</span>
                   </div>
                   <button onClick={closeMobile} className="p-2 rounded-lg hover:bg-secondary">
                     <X className="w-5 h-5" />
@@ -168,7 +168,7 @@ export function Sidebar({ onLogout }: SidebarProps) {
             animate={{ opacity: 1 }}
             className="text-xl font-bold gradient-text"
           >
-            Y Note
+            P-Note
           </motion.span>
         )}
       </div>
