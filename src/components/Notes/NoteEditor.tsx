@@ -238,7 +238,7 @@ export function NoteEditor() {
   }
 
   return (
-    <div className="h-[calc(100vh-4rem)] flex flex-col">
+    <div className="min-h-[calc(100vh-10rem)] flex flex-col">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
