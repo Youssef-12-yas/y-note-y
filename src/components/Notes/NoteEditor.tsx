@@ -142,14 +142,15 @@ export function NoteEditor() {
         content,
       });
       setHasUnsavedChanges(false);
-      toast.success('Note saved!');
 
-      // Trigger AI verification after manual save (only for user notes)
-      if (!note.is_ai_generated && content.trim().length > 20) {
+      // Trigger AI verification after manual save (only for user notes with content)
+      if (!note.is_ai_generated && content.trim().length > 0) {
+        toast.success('Saved! AI is analyzing your note...');
+        setVerificationResult(null);
         verifyNote.mutate(
           {
             noteId,
-            noteTitle: title,
+            noteTitle: title || 'Untitled',
             noteContent: content,
             lessonId: note.lesson_id,
           },
@@ -157,9 +158,17 @@ export function NoteEditor() {
             onSuccess: (data) => {
               setVerificationResult(data.analysis);
             },
+            onError: (err) => {
+              console.error('AI verify failed:', err);
+            },
           }
         );
+      } else {
+        toast.success('Note saved!');
       }
+    } catch (err) {
+      console.error('Save failed:', err);
+      toast.error('Failed to save note');
     } finally {
       setIsSaving(false);
     }
